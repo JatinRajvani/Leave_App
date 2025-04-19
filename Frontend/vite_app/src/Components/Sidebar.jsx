@@ -1,13 +1,24 @@
-import { useState } from "react";
+import { useState,useEffect} from "react";
+import { useSelector } from "react-redux";
 import { FaBars, FaTimes } from "react-icons/fa"; 
 import { Link, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { logoutUser } from "./slice.jsx";
+import {  useDispatch } from "react-redux";
 
 const Sidebar = () => {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+   const handleLogout = () => {
+     dispatch(logoutUser());  // Dispatch Redux logout action
+     localStorage.removeItem("token"); // Clear token from storage
+     navigate("/"); // Redirect to Login Page
+   };
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false); // Sidebar toggle state
 
   const menuItems = [
-    { id: "dashboard", label: "Dashboard", icon: "📊", path: "/" },
+    { id: "dashboard", label: "Dashboard", icon: "📊", path: "/homepage" },
     { id: "apply", label: "Apply for Leave", icon: "📝", path: "/ApplyLeave" },
     { id: "history", label: "Leave History", icon: "📅", path: "/LeaveHistory" },
     { id: "calendar", label: "Calendar", icon: "📆", path: "/calendar" },
@@ -15,6 +26,52 @@ const Sidebar = () => {
     { id: "help", label: "Help & Support", icon: "❓", path: "/Help&Support" },
   ];
 
+  const [userInfo , setUserInfo] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+      // Get token from Redux store
+      const token = useSelector((state) => state.auth.token);
+
+      useEffect(() => {
+        const fetchUserDetails = async () => {
+            if (!token) return; // If no token, do not fetch
+
+            setLoading(true);
+            try {
+                const response = await fetch("http://localhost:4500/api/profile", {
+                    method: "GET",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                });
+
+                if (!response.ok) throw new Error("Failed to fetch user data");
+
+                const data = await response.json();
+                setUserInfo(data);
+                console.log(data)
+                
+             
+          
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUserDetails();
+    }, [token]); // Fetch only when token is available
+    console.log(userInfo)
+  
+    if (loading) return <p>Loading...</p>;
+    if (error) return <p>Error: {error}</p>;
+
+
+   
+    
   return (
     <>
       {/* Hamburger Button (Only on Mobile) */}
@@ -45,8 +102,14 @@ const Sidebar = () => {
               <span className="text-xl">👨‍🎓</span>
             </div>
             <div>
-              <h3 className="font-bold text-lg">Prem</h3>
-              <p className="text-sm text-blue-300">Computer Science</p>
+            {userInfo && userInfo.user ? (
+  <>
+    <h3 className="font-bold text-lg">{userInfo.user.username}</h3>
+    <p className="text-sm text-blue-300">{userInfo.user.course}</p>
+  </>
+) : (
+  <h3 className="font-bold text-lg">Loading...</h3>
+)}
             </div>
           </div>
         </Link>
@@ -73,6 +136,13 @@ const Sidebar = () => {
             ))}
           </ul>
         </div>
+        <button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-2 rounded transition duration-200"
+                onClick={handleLogout}
+              >
+                Log out
+              </button>
       </div>
 
       {/* Background Overlay (Only on Mobile) */}
@@ -82,6 +152,8 @@ const Sidebar = () => {
           onClick={() => setIsOpen(false)}
         ></div>
       )}
+      
+
     </>
   );
 };
