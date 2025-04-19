@@ -38,7 +38,7 @@ const Login = () => {
                   onChange={(e) => setRole(e.target.value)}
                   className="mr-2"
                 />
-                Staff
+                Admin
               </label>
             </div>
           </div>
